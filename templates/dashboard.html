@@ -1,0 +1,203 @@
+{% extends "index.html" %}
+
+
+{% block content %}
+
+<h1 class="mx-3 text-center">Dashboard</h1>
+<hr class="mb-5">
+
+<div class="row px-2 gx-3 d-flex justify-content-center" id="results">
+    <div class="col-lg">
+        <div class="p-4 rounded text-white"
+            style="background-image: linear-gradient(90deg, rgb(0, 85, 131), rgba(0, 0, 0, 0));">
+            <h1 class="d-flex"><i class="bi bi-broadcast"></i></h1>
+            <h1>{{ dash["Length"] }}</h1>
+            <hr>
+            <h4>Daily Vehicles</h4>
+        </div>
+    </div>
+    <div class="col-lg">
+        <div class="p-4 rounded text-white"
+            style="background-image: linear-gradient(90deg,rgb(0, 85, 131), rgba(0, 0, 0, 0));">
+            <h1 class="d-flex"><i class="bi bi-car-front-fill"></i></h1>
+            <h1>{{ dash["Cars"] }}</h1>
+            <hr>
+            <h4>Cars</h4>
+        </div>
+    </div>
+    <div class="col-lg">
+        <div class="p-4 rounded text-white"
+            style="background-image: linear-gradient(90deg,rgb(0, 85, 131), rgba(0, 0, 0, 0));">
+            <h1 class="d-flex"><i class="bi bi-bus-front"></i></h1>
+            <h1>{{ dash["Bus"] }}</h1>
+            <hr>
+            <h4>Buses</h4>
+        </div>
+    </div>
+    <div class="col-lg">
+        <div class="p-4 rounded text-white"
+            style="background-image: linear-gradient(90deg, rgb(0, 85, 131), rgba(0, 0, 0, 0));">
+            <h1 class="d-flex"><i class="bi bi-truck"></i></h1>
+            <h1>{{ dash["Trucks"] }}</h1>
+            <hr>
+            <h4>Trucks</h4>
+        </div>
+
+    </div>
+    <div class="col-lg">
+        <div class="p-4 rounded text-white"
+            style="background-image: linear-gradient(90deg, rgb(0, 85, 131), rgba(0, 0, 0, 0));">
+            <h1 class="d-flex"><i class="bi bi-bicycle"></i></h1>
+            <h1>{{ dash["Motorcycle"] }}</h1>
+            <hr>
+            <h4>Motorcycle</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row gx-3 mx-1 mt-3" id="graph">
+    <div class="col">
+        <div class="chartBox p-1 rounded" style="background-color:rgb(0, 39, 60);">
+            <canvas id="myChart1" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col">
+        <div class="chartBox p-1 rounded" style="background-color:rgb(0, 39, 60);">
+            <canvas id="myChart2" height="200" width="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3 h-2">
+    <!-- <div class="row gx-3 d-flex justify-content-center">
+            {% for video in videoList %}
+                <div class="col-xl">
+                    <div class="img-container rounded shadow p-4 text-center">
+                        <img class="rounded-3" src="{{ url_for(video) }}" alt="" >
+                        <h3 class="text-white text-center mt-1">Camera {{cam}}</h3>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>  -->
+    <div class="input-group start-50 p-2 w-25 translate-middle-x">
+        <input type="text" class="form-control bg-dark rounded-pill border-info border-3 text-info"
+            oninput="searchBox()" aria-label="Search" placeholder="Search" id="search">
+    </div>
+    <div class="vehicle-list p-2 h-25 rounded overflow-auto shadow">
+        {% for table in tables %}
+        {{titles[loop.index]}}
+        {{ table | safe}}
+        {% endfor %}
+    </div>
+
+
+    <script>
+        const table = document.getElementsByTagName("table");
+        table[0].classList = "table table-dark table-striped table-hover";
+        table[0].style = "border: none;";
+
+        table[0]
+        const table_head = document.getElementsByTagName("thead");
+        const t_head = table_head[0].getElementsByTagName('th');
+        const t_head_row = table_head[0].getElementsByTagName('tr');
+        t_head_row[0].style = "";
+        for (i = 0; i < t_head.length; i++) {
+            t_head[i].setAttribute("scope", "col");
+        }
+
+        const table_body = document.getElementsByTagName("tbody");
+        const body_head = table_body[0].getElementsByTagName('th');
+        for (i = 0; i < body_head.length; i++) {
+            body_head[i].setAttribute("scope", "row");
+        }
+        function searchBox() {
+            const table_body = document.getElementsByTagName("tbody")[0];
+            const searchText = document.getElementById('search').value;
+            const tableRow = table_body.querySelectorAll("tr");
+            let new_row;
+
+            if (searchText.length !== 0) {
+                for (let i = 0; i < tableRow.length; i++) {
+                    if (!tableRow[i].innerHTML.includes(searchText)) {
+                        tableRow[i].style.display = "none"
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < tableRow.length; i++) {
+
+                    tableRow[i].style.display = "table-row"
+                }
+            }
+        }     
+    </script>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
+
+    <script>
+        // setup    
+
+        let vehicles_totals = JSON.parse({{ vehicles_vs_totals | tojson}});
+        const vehicle_values = Object.values(vehicles_totals)
+        const vehicle_keys = Object.keys(vehicles_totals)
+        console.log(vehicle_keys)
+        const data = {
+            labels: vehicle_keys,
+            datasets: [{
+
+                label: 'Vehicle data',
+                data: vehicle_values,
+                backgroundColor: [
+                    'rgba(255, 26, 104, 0.2)',
+                    'rgba(54, 162, 235, 0.2)',
+                    'rgba(255, 206, 86, 0.2)',
+                    'rgba(75, 192, 192, 0.2)'
+                ],
+                borderColor: [
+                    'rgba(255, 26, 104, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+
+        // config 
+        const config1 = {
+            type: 'bar',
+            data,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        };
+
+        const config2 = {
+            type: 'pie',
+            data,
+            options: {
+                responsive: true
+            }
+        };
+
+        // render init block
+        const myChart1 = new Chart(
+            document.getElementById('myChart1'),
+            config1
+        );
+        const myChart2 = new Chart(
+            document.getElementById('myChart2'),
+            config2
+        );
+        const pieChart1 = document.getElementById('myChart1');
+        const pieChart2 = document.getElementById('myChart2');
+        pieChart1.style.minHeight = "450px"
+        pieChart2.style.maxHeight = "450px"
+    </script>
+
+    {% endblock %}

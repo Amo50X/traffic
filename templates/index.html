@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <title>Document</title>
+
+</head>
+
+<body class=" text-white">
+    <div class="nav-carousel">
+        <div id="carouselNav" class="carousel slide" >
+            <div class="carousel-inner text-center ">
+                <div class="carousel-item active">
+                    <a href="/" class="nav-link rounded"><i class="bi bi-house-door me-2"></i>Home</a>
+                </div>
+                <div class="carousel-item">
+                    <a href="/dashboard" class="nav-link rounded"><i class="bi bi-speedometer me-2"></i>Dashboard</a>
+                </div>
+                <div class="carousel-item">
+                    <a href="/settings" class="nav-link rounded"><i class="bi bi-gear me-2"></i>Settings</a>
+                </div>
+                <div class="carousel-item">
+                    <a href="/clips" class="nav-link rounded"><i class="bi bi-film me-2"></i>Clips</a>
+                </div>
+                <div class="carousel-item">
+                    <a href="/contact" class="nav-link rounded"><i class="bi bi-person-lines-fill me-2"></i>Contacts</a>
+                </div>
+                
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselNav" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselNav" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    </div>
+
+
+    <div class="sidebar position-fixed p-1 z-1">
+        <div class="p-2">
+            <div class="side-caption text-center">
+                <h2><span><i class="bi bi-sign-stop-lights-fill"></i> Truffic</span></h2>
+            </div>
+            <hr>
+        </div>
+
+        <nav class="navbar navbar-expand-lg ">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbar">
+                <ul class="navbar-nav flex-column w-100 p-2">
+                    <li class="nav-item ">
+                        <a href="/" class="nav-link rounded"><i class="bi bi-house-door me-2"></i>Home</a>
+                    </li>
+
+                    <li class="nav-item mt-1">
+                        <a href="/dashboard" class="nav-link rounded"><i class="bi bi-speedometer me-2"></i>Dashboard</a>
+                    </li>
+
+                    <li class="nav-item mt-1">
+                        <a href="/settings" class="nav-link rounded"><i class="bi bi-gear me-2"></i>Settings</a>
+                    </li>
+
+                    <li class="nav-item mt-1">
+                        <a href="/clips" class="nav-link rounded"><i class="bi bi-film me-2"></i>Clips</a>
+                    </li>
+
+                    <li class="nav-item mt-1">
+                        <a href="/contact" class="nav-link rounded"><i class="bi bi-person-lines-fill me-2"></i>Contacts</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+
+    <div class="main" style="height: 100vh;">
+        {% block content %}
+
+        <h1 class="mx-3 text-center">Home</h1>
+        <hr>
+        <div class="row h-100 align-content-center" id="home-row" >
+            <div class="col d-flex align-items-center">
+                <div class="home-heading flex-shrink">
+                    <h1>Traffic</h1>
+                    <h1><span>Monitoring</span></h1>
+                    <h1>System</h1>
+                </div>
+            </div>
+
+            <div class="col text-center p-3 rounded shadow">
+                <img src="static\def_vid.png" alt="" class="rounded">
+            </div>
+
+        </div>
+
+        {% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+
+    
+       
+</body>
+
+</html>

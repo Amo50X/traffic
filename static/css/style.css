@@ -1,0 +1,160 @@
+:root{
+    --transparent: rgba(255, 255, 255, 0);
+}
+
+body{
+    background-color: rgb(8, 21, 35);
+    height: 150vh;
+}
+
+
+span{
+    color: rgb(0, 166, 255);
+}
+
+.sidebar {
+    position: fixed;
+    width: 300px;
+    height: 100%;
+    background-color: rgb(38, 38, 38);
+}
+.sidebar a{
+    transition: transform .5s;
+}
+.sidebar a:hover{
+    transform: scale(1.05);
+    color: white;
+    background-color: rgb(0, 85, 131); 
+}
+
+.home-heading{
+    padding-left: 50px;
+    align-items: center;
+}
+
+.home-heading h1 {
+    font-size: 7rem;
+    align-items: center;
+}
+.home-heading:hover{
+    text-shadow: 4px 4px 18px rgb(0, 85, 131);
+}
+
+.main {
+    padding: 5px 20px 20px 20px;
+    margin-left: 300px;
+}
+
+#home-row{
+    height: 90%;
+}
+
+.collapse {
+    font-size: 1.2rem;
+    font-weight: 500;
+    padding: 0.2rem;
+
+}
+.collapse .nav-link:active {
+    color: white;
+    background-color: rgb(0, 85, 131);
+}
+
+.nav-carousel{
+    display: none;
+}
+
+.test-frame{
+    background-color: black;
+    height: 480px;
+    width: 640px;
+}
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+img:hover{
+    box-shadow: 0px 0px 18px 9px rgb(0, 85, 131);
+}
+
+input::placeholder {
+    color: white !important;
+}
+
+table tr td, table tr th{
+    background-color: rgba(0, 85, 131, 0.277) !important;
+    color: white !important; 
+}
+
+#results .col-lg div{
+    transition: transform .5s;
+}
+
+#results .col-lg div:hover{
+    transform: scale(0.9);
+    color: aqua !important;
+}
+#graph div{
+    transition: transform .5s;
+}
+#graph div:hover{
+    transform: scale(0.95);
+}
+
+.vehicle-list {
+    max-height: 21rem;
+}
+
+@media screen and  (max-width: 1100px) {
+    .sidebar{
+        display: none;
+    }
+    .main{
+        padding: 30px;
+        margin-left: 0;
+    }
+    .nav-carousel {
+        display: flex;
+        height: 75px;
+        
+    }
+    .carousel{
+        width: 100%;
+        background-image: linear-gradient(rgb(0, 85, 131), var(--transparent));
+    }
+    .carousel a{
+        font-weight: 500;
+        font-size: 2.5rem;
+        color: white;
+    }
+    img {
+        width: 100%;
+        height: auto;
+    }
+    .home-heading h1{
+        font-size: 3rem;
+    }
+    #home-row{
+        display: flex;
+        height: fit-content;
+    }
+
+    #results .col-lg{
+        margin-top: 1rem;
+        width: 400px;
+    }
+  }
+
+  @media screen and (max-width: 800px) {
+    img {
+        width: 100%;
+        height: auto;
+    }
+
+    .test-frame{
+        display: none;
+    }
+
+  }

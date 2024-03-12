@@ -1,0 +1,42 @@
+{% extends "index.html" %}
+
+
+{% block content %}
+
+    <h1 class="mx-3 text-center">Clips</h1>
+    <hr>
+
+   
+    <h2 class="text-center">Captured Video</h2>
+    <div class="p-2 rounded">
+        <div class="row mt-3">
+            {% for clip in clips %}
+                <div class="col-lg-2  ">
+                    <video width="100%" controls>
+                        <source src="{{url_for('static', filename='clips/captured/'+ clip)}}" type="video/mp4">
+                    </video> 
+                    <h5>{{clip}}</h5>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <hr>
+    <h2 class="text-center">predicted Video</h2>
+    <div class="p-2 rounded">
+        <div class="row mt-3">
+            {% for clip in preds %}
+                <div class="col-lg-2 ">
+                    <video width="100%" controls>
+                        <source src="{{url_for('static', filename='clips/predicted/'+ clip)}}" type="video/mp4">
+                    </video> 
+                    <h5>{{clip}}</h5>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="">
+        <form action="" method="post" class="d-block h-100 position-relative" id="configForm">
+            <input type="submit" name="sink" id="Sink" class="btn btn-primary" value="Sink">
+        </form>
+    </div>
+{% endblock %}

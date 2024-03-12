@@ -1,0 +1,209 @@
+{% extends "index.html" %}
+
+
+{% block content %}
+
+<h1 class="mx-3 text-center">Settings</h1>
+<hr>
+
+<div class="row p-2 justify-content-around">
+    <div class="col-xl-8 mt-3 p-5 shadow rounded-5">
+        <h1>Configure System</h1>
+        {% if not isConfigured %}
+        <h3 class="text-danger">Not Configured</h3>
+        {% endif %}
+        <form action="" method="post" class="d-block h-100 position-relative" id="configForm">
+            <div class="mt-3">
+                <p>Number of Cameras</p>
+                <div class="form-check-inline">
+                    <input class="form-check-input" type="radio" name="camera" id="Camera1" value="1" checked>
+                    <label class="form-check-label" for="Camera1">
+                        1
+                    </label>
+                </div>
+                <div class="form-check-inline">
+                    <input class="form-check-input" type="radio" name="camera" id="Camera2" value="2">
+                    <label class="form-check-label" for="Camera2">
+                        2
+                    </label>
+                </div>
+                <div class="form-check-inline">
+                    <input class="form-check-input" type="radio" name="camera" id="Camera3" value="3">
+                    <label class="form-check-label" for="Camera3">
+                        3
+                    </label>
+                </div>
+                <div class="form-check-inline">
+                    <input class="form-check-input" type="radio" name="camera" id="Camera4" value="4">
+                    <label class="form-check-label" for="Camera4">
+                        4
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="admin" class="form-label">Camera username</label>
+                <input type="text" name="admin" class="form-control" id="admin" placeholder="admin">
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Camera username</label>
+                <input type="password" name="password" class="form-control" id="password" placeholder="password">
+            </div>
+
+            <div class="mt-3">
+                <label for="confidence" class="form-label">Confidence</label>
+                <input type="range" name="conf" class="form-range" oninput="myFunction()" min="0.25" max="0.95"
+                    step="0.05" id="confidence">
+                <h5 class="form-label text-center" id="level"></h5>
+            </div>
+
+            <div class="mt-3">
+                <label for="modelSelect">Choose Model</label>
+                <select class="form-select mb-3" name="model" onchange="check_model()" id="modelSelect">
+                    <option selected>none</option>
+                    {% for model in models %}
+                    <option value="{{model}}">{{ model }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mt-3">
+                <label for="radio-container">Mode</label>
+                <div class="form-check" id="radio-container">
+                    <input class="form-check-input" type="radio" name="mode" id="security" value="1" checked>
+                    <label class="form-check-label" for="security">
+                        Security
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="mode" id="monitor" value="2">
+                    <label class="form-check-label" for="monitor">
+                        Monitoring
+                    </label>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <div class="form-check">
+                    <input class="form-check-input" name="real" onchange="real_checkbox()" type="checkbox"
+                        id="real-time">
+                    <label class="form-check-label" for="real-time">
+                        Real-Time Detection
+                    </label>
+                    <p class="text-danger" id="message">This option enabled may cause latency</p>
+                </div>
+            </div>
+            <div class="mt-3">
+                <input type="submit" name="submit" id="submit" class="btn btn-primary" value="Submit">
+                {% if isConfigured %}
+                <input type="submit" name="submit" id="submit" class="btn btn-danger" value="Delete">
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+    <!-- <div class="col-xl-6 p-3 w-auto mt-3 shadow rounded-5">
+        <div class="test-frame position-relative">
+            <div class="position-absolute top-50 start-50 translate-middle bg-primary text-center" id="poly">
+                <h3 style="position: relative; margin-top: 50%;">Area of detection</h3>
+            </div>
+        </div>
+    </div> -->
+</div>
+<hr>
+{% if isConfigured %}
+
+<h2 class="text-center">Camera Configuration</h2>
+<form action="" method="post">
+    <div class="row mt-3 p-3 d-flex justify-content-around">
+        {% for cam in range(cameras) %}
+            <div class="col-3 p-3 rounded shadow">
+                <h3 class="text-center">Camera {{cam}}</h3>
+                <hr>
+                <label for="ip{{cam}}" class="form-label">IP address</label>
+                <input class="form-control w-auto "
+                        placeholder="xxx.xxx.xxx.xxx"
+                        name="ip{{cam}}"
+                        type="text" 
+                        minlength="7" 
+                        maxlength="15" 
+                        size="15" 
+                        pattern="^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$"
+                        id="ip{{cam}}"
+                        >
+                <label for="port{{cam}}" class="form-label mt-3 ">Port</label>       
+                <input type="number" 
+                        class="form-control w-auto" 
+                        name="port{{cam}}" 
+                        placeholder="xxxx"
+                        maxlength="4" 
+                        size="4"
+                        min="0000"
+                        max="9999"
+                        id="port{{cam}}">
+            </div> 
+        {% endfor %}
+    </div>
+    <div class="mt-3 text-center">
+        <input type="submit" name="submit" id="submit" class="btn btn-primary btn-lg" value="Config">
+    </div>
+</form>
+
+{% endif %}
+
+
+<script>
+    function myFunction() {
+        var range_value = document.getElementById("confidence").value;
+        document.getElementById("level").innerHTML = range_value;
+    }
+    var range_value = document.getElementById("confidence").value;
+
+    document.getElementById("level").innerHTML = range_value;
+
+    let model_value = document.getElementById("modelSelect");
+    submut_btn = document.getElementById('submit');
+
+
+    function check_model() {
+
+        if (model_value.value === "none") {
+            submut_btn.disabled = true;
+
+        }
+        else {
+            submut_btn.disabled = false;
+        }
+    }
+    if (model_value.value === "none") {
+        submut_btn.disabled = true;
+
+    }
+    else {
+        submut_btn.disabled = false;
+    }
+
+    let real_time = document.getElementById("real-time");
+    let message = document.getElementById("message");
+
+    function real_checkbox() {
+        if (real_time.checked == true) {
+            message.style.display = "block"
+        }
+        else {
+            message.style.display = "none"
+        }
+    }
+
+    if (real_time.checked == true) {
+        message.style.display = "block"
+    }
+    else {
+        message.style.display = "none"
+    }
+
+
+
+</script>
+{% endblock %}
