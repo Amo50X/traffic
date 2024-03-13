@@ -251,7 +251,45 @@ def VideoSink(model, conf: float, cap_Path: str, pdt_Path: str):
                             record.write(f'{data},{vehicle_data[data]}\n')
 
 
-def generate_frame(cap, real, model,queue_cam_dict):
+def generate_frame(cap, real, model, cap_Path, conf, pdt_Path, queue_cam_dict):
+    
+    source_path = cap_Path
+    target_path = pdt_Path
+    video_info = sv.VideoInfo.from_video_path(source_path)
+
+    byte_track = sv.ByteTrack(
+        frame_rate=video_info.fps, track_thresh=conf
+    )
+
+    thickness = sv.calculate_dynamic_line_thickness(
+        resolution_wh=video_info.resolution_wh
+    )
+    text_scale = sv.calculate_dynamic_text_scale(resolution_wh=video_info.resolution_wh)
+    bounding_box_annotator = sv.BoundingBoxAnnotator(thickness=thickness)
+    poly_annotator = sv.PolygonAnnotator(
+        color=sv.Color.red,
+        thickness=thickness
+    )
+    label_annotator = sv.LabelAnnotator(
+        text_scale=text_scale,
+        text_thickness=thickness,
+        text_position=sv.Position.BOTTOM_CENTER,
+    )
+    trace_annotator = sv.TraceAnnotator(
+        thickness=thickness,
+        trace_length=video_info.fps * 2,
+        position=sv.Position.BOTTOM_CENTER,
+    )
+
+    frame_generator = sv.get_video_frames_generator(source_path=source_path)
+
+    polygon_zone = sv.PolygonZone(
+        polygon=SOURCE, frame_resolution_wh=video_info.resolution_wh
+    )
+    view_transformer = ViewTransformer(source=SOURCE, target=TARGET)
+
+    coordinates = defaultdict(lambda: deque(maxlen=video_info.fps))
+    
     while True:
         frame = queue_cam_dict[f'{cap}'].get()
         box_annotator = sv.BoxAnnotator()
@@ -263,9 +301,6 @@ def generate_frame(cap, real, model,queue_cam_dict):
             detections = sv.Detections.from_ultralytics(results)
             detections = detections[detections.class_id == 0]
 
-
-            frame = box_annotator.annotate(scene=frame, detections=detections)
-        
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
 

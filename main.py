@@ -213,6 +213,10 @@ def config():
 
     return render_template('settings.html', models = modelList, isConfigured = isConfig, config = addresses, cameras=cameras)
 
+@app.route('/cameras', methods=["POST","GET"])
+def cctv():
+    return render_template('camera.html')
+
 @app.route('/clips', methods=["POST","GET"])
 def captured():
     clipList = os.listdir(cap_Path)

@@ -1,0 +1,20 @@
+{% extends "index.html" %}
+
+
+{% block content %}
+
+<h1 class="mx-3 text-center">Cameras</h1>
+<hr>
+
+<div class="row gx-3 d-flex justify-content-center">
+    {% for video in videoList %}
+        <div class="col-xl">
+            <div class="img-container rounded shadow p-4 text-center">
+                <img class="rounded-3" src="{{ url_for(video) }}" alt="" >
+                <h3 class="text-white text-center mt-1">Camera {{cam}}</h3>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
