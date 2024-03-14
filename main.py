@@ -1,5 +1,6 @@
 import json
-from flask import Flask, render_template, Response, request,redirect
+import cv2
+from flask import Flask, render_template, Response, request,redirect, flash
 from modules import VideoSink, generate_frame, RunningCamera, setCamera, PolyDraw
 import numpy as np
 import os
@@ -14,6 +15,8 @@ import pickle
 import queue
 
 app = Flask(__name__)
+
+app.secret_key = "5a4wd45awd4wa5d4aw5d4a5wd45aw4daw5d"
 
 modelList = os.listdir('static/models')
 licenseModel = YOLO('numPlatev8n.pt')
@@ -41,54 +44,54 @@ def gen_camera():
     if cameras == 1:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ),
+            return Response(generate_frame(camDict["cap0"],model=model, real=real_time,conf=conf, pdt_Path=pdt_Path, queue_cam_dict=queue_cam_dict, points=points ),
                              mimetype='multipart/x-mixed-replace; boundary=frame')
     #----------------------------------------------------------------------------
     if cameras == 2:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
 
         @app.route(f'/video1')
         def video1():
-            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
     #----------------------------------------------------------------------------   
     if cameras == 3:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
 
         @app.route(f'/video1')
         def video1():
-            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         
         @app.route(f'/video2')
         def video2():
-            return Response(generate_frame(camDict["cap2"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap2"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
     #----------------------------------------------------------------------------
     if cameras == 4:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
 
         @app.route(f'/video1')
         def video1():
-            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         
         @app.route(f'/video2')
         def video2():
-            return Response(generate_frame(camDict["cap2"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap2"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         @app.route(f'/video3')
         def video3():
-            return Response(generate_frame(camDict["cap3"],model=model, real=real_time, queue_cam_dict=queue_cam_dict ), 
+            return Response(generate_frame(camDict["cap3"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
     #================================================================================================
 
@@ -118,13 +121,15 @@ if os.path.isfile(address_path):
     for cam in range(cameras):
         ip = cam_config[f'IP{cam}']
         port = cam_config[f'PORT{cam}']
-        # camDict = setCamera(cam,ip,port,user,password)
+        points = tuple(cam_config[f"Point{cam}"])
+        camDict = setCamera(cam,ip,port,user,password)
     for cap in camDict:
         queue_cam_dict.update({f'{camDict[cap]}': queue.Queue() })
-    # gen_camera()
+    gen_camera()
+
 
 def run_app():
-    app.run(host="0.0.0.0", port=8080, debug=True)#, debug=True,threaded=True
+    app.run(host="0.0.0.0", port=5050, threaded=True)#, debug=True,threaded=True
 
 @app.route('/')
 def index():
@@ -158,7 +163,7 @@ def states():
 
 @app.route('/settings', methods=['GET','POST'])
 def config():
-    global isConfig,load_config
+    global isConfig,load_config, cameras, user, password
     if isConfig:
         load_config = pickle.load(open(config_data_path, 'rb')) 
         cameras = int(load_config['Cameras'])
@@ -167,26 +172,27 @@ def config():
     if request.method == "POST":
         if request.form.get('submit') == "Submit":
             print("Data Submited")
-            CAMERAS = request.form.get('camera')
-            USER = request.form.get('admin')
-            PASSWORD = request.form.get('password')
-            CONF = request.form.get('conf')
-            MODEL = request.form.get('model')
-            MODE = request.form.get('mode')
-            REAL = request.form.get('real')
+            cameras = request.form.get('camera')
+            user = request.form.get('admin')
+            password = request.form.get('password')
+            conf = request.form.get('conf')
+            model = request.form.get('model')
+            mode = request.form.get('mode')
+            real = request.form.get('real')
 
             saved_config = {
-                "Cameras" : CAMERAS,
-                "User" : USER,
-                "Password" : PASSWORD,
-                "Confidence": CONF,
-                "Model": MODEL,
-                "Mode": MODE,
-                "Real": REAL
+                "Cameras" : cameras,
+                "User" : user,
+                "Password" : password,
+                "Confidence": conf,
+                "Model": model,
+                "Mode": mode,
+                "Real": real
             }    
             isConfig = True
             print(saved_config)
             pickle.dump(saved_config, open(config_data_path, 'wb') )
+            model = YOLO(f"{weight_path}{model}" )
             return redirect("/settings")
 
         elif request.form.get('submit') == "Delete":
@@ -202,22 +208,33 @@ def config():
                 port = request.form.get(f'port{cam}')
                 addresses.update({f'IP{cam}': ip})
                 addresses.update({f'PORT{cam}': port})
+                camDict = setCamera(cam,ip,port,user,password)
+            
+
+            for index, cam in enumerate(camDict):
+                _, frame = camDict[cam].read()
+                if not _:
+                    flash("Something is wrong with cameras", category='error')
+                    return render_template('settings.html', models = modelList, isConfigured = isConfig, config = addresses, cameras=cameras)
+                width = int(camDict[cam].get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(camDict[cam].get(cv2.CAP_PROP_FRAME_HEIGHT))
+                print(width)
+                test_img = cv2.resize(frame, [int(width / 2),int(height / 2)])
+
+                point = cv2.selectROI(img=test_img)
+                cv2.destroyAllWindows()
+                addresses.update({f"Point{index}": point})       
             pickle.dump(addresses, open(address_path, 'wb') )
-            print(addresses)
-            # for index,cam in enumerate(camDict):
-            #     print(index)
-            #     _, frame = camDict[cam].read()
-            #     frame, poly_points = PolyDraw().setPolygon(frame)   
-            #     cv2.imwrite(f'static/cam{index}.jpg', frame)
+
             return redirect("/settings")
 
     return render_template('settings.html', models = modelList, isConfigured = isConfig, config = addresses, cameras=cameras)
 
-@app.route('/cameras', methods=["POST","GET"])
+@app.route('/cameras')
 def cctv():
     return render_template('camera.html')
 
-@app.route('/clips', methods=["POST","GET"])
+@app.route('/clips')
 def captured():
     clipList = os.listdir(cap_Path)
     predictList = os.listdir(pdt_Path)
@@ -230,14 +247,16 @@ def captured():
 
 # ========================================================================================================================================================================
 if __name__ == "__main__":
-    run_app()
-    # app_thread = threading.Thread(target=run_app)
-    # for index, cam in enumerate(camDict):
-    #     print('cap')
-    #     _thread = threading.Thread(target=RunningCamera, args=(camDict[cam], cap_Path, queue_cam_dict))
-    #     threads.update({f'thread{index}':_thread})
+    # run_app()
+    app_thread = threading.Thread(target=run_app)
+    if os.path.isfile(address_path):
+        for index, cam in enumerate(camDict):
+            print('cap')
+            _thread = threading.Thread(target=RunningCamera, args=(camDict[cam], cap_Path, queue_cam_dict))
+            threads.update({f'thread{index}':_thread})
 
-    # app_thread.start()
-    # for thread in threads:
-    #     print(thread)
-    #     threads[thread].start()
+    app_thread.start()
+    if os.path.isfile(address_path):
+        for thread in threads:
+            print(thread)
+            threads[thread].start()

@@ -7,13 +7,14 @@ from datetime import datetime
 from collections import defaultdict, deque
 from ultralytics import YOLO
 import queue
+import time
 
 queue_cam_dict = {}
 
 fourcc = cv2.VideoWriter_fourcc(*'h264') #h264
 camDict = {}
 
-width, height = 0,0
+
 
 
 record_path = 'static/record.csv'
@@ -40,15 +41,9 @@ TARGET = np.array(
 
 
 def setCamera (index, ip, port, user, password):
-    global width,height
-    addr = f'rtsp://{user}:{password}@{ip}:{port}'
-    print(addr)
+    # addr = f'rtsp://{user}:{password}@{ip}:{port}'
+    addr = f'http://{ip}:{port}/video'
     cap =  cv2.VideoCapture(addr)
-    width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1440)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
     camDict.update({f'cap{index}': cap})
         
     return camDict
@@ -64,9 +59,6 @@ class PolyDraw:
         if event == cv2.EVENT_LBUTTONDOWN:
             self.pointlist.append((x, y))
             ix, iy = x, y
-
-        # if event == cv2.EVENT_MOUSEMOVE:
-        #     mx, my = x, y
 
     def setPolygon(self, frame):
         cv2.namedWindow('image')
@@ -90,8 +82,10 @@ class PolyDraw:
 
             if cv2.waitKey(20) & 0xFF == 27:
                 cv2.destroyAllWindows()
-                return img, self.pointlist
+                return img, tuple(self.pointlist)
  
+     
+
 class ViewTransformer:
     def __init__(self, source: np.ndarray, target: np.ndarray) -> None:
         source = source.astype(np.float32)
@@ -251,59 +245,16 @@ def VideoSink(model, conf: float, cap_Path: str, pdt_Path: str):
                             record.write(f'{data},{vehicle_data[data]}\n')
 
 
-def generate_frame(cap, real, model, cap_Path, conf, pdt_Path, queue_cam_dict):
-    
-    source_path = cap_Path
-    target_path = pdt_Path
-    video_info = sv.VideoInfo.from_video_path(source_path)
-
-    byte_track = sv.ByteTrack(
-        frame_rate=video_info.fps, track_thresh=conf
-    )
-
-    thickness = sv.calculate_dynamic_line_thickness(
-        resolution_wh=video_info.resolution_wh
-    )
-    text_scale = sv.calculate_dynamic_text_scale(resolution_wh=video_info.resolution_wh)
-    bounding_box_annotator = sv.BoundingBoxAnnotator(thickness=thickness)
-    poly_annotator = sv.PolygonAnnotator(
-        color=sv.Color.red,
-        thickness=thickness
-    )
-    label_annotator = sv.LabelAnnotator(
-        text_scale=text_scale,
-        text_thickness=thickness,
-        text_position=sv.Position.BOTTOM_CENTER,
-    )
-    trace_annotator = sv.TraceAnnotator(
-        thickness=thickness,
-        trace_length=video_info.fps * 2,
-        position=sv.Position.BOTTOM_CENTER,
-    )
-
-    frame_generator = sv.get_video_frames_generator(source_path=source_path)
-
-    polygon_zone = sv.PolygonZone(
-        polygon=SOURCE, frame_resolution_wh=video_info.resolution_wh
-    )
-    view_transformer = ViewTransformer(source=SOURCE, target=TARGET)
-
-    coordinates = defaultdict(lambda: deque(maxlen=video_info.fps))
-    
+def generate_frame(cap, real, model,conf,pdt_Path, queue_cam_dict,points):
     while True:
         frame = queue_cam_dict[f'{cap}'].get()
-        box_annotator = sv.BoxAnnotator()
-
 
         if real == 'on':
-            results = model(frame, verbose=False)[0]
-
-            detections = sv.Detections.from_ultralytics(results)
-            detections = detections[detections.class_id == 0]
-
+            pass
+        
+        frame = RealTimeDetection(frame=frame, cap=cap, model=model,conf=conf, pdt_Path=pdt_Path,distance=36,points=points)
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
-
 
         yield (b'--frame\r\n'
                 b'Content-Type: image/jpag\r\n\r\n' + frame + b'\r\n') 
@@ -336,42 +287,148 @@ def RunningCamera(cap, cap_Path, queue_cam_dict):
     
         count = count + 1
 
-def RealTimeDetection(cap, model, conf, pdt_Path):
-    count = 0
+def RealTimeDetection(frame, cap, model, conf,pdt_Path, distance, points):
+    
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    down = {}
+    up = {}
+    counter_down = []
+    counter_up = []
 
-    box_annotator = sv.BoxAnnotator()
-    curr_datetime = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-    out = cv2.VideoWriter(f'{pdt_Path}/{curr_datetime}.mp4', fourcc, 20.0, (width, height)) 
-    while True:
-        success, frame = cap.read()
-        if not success:
-            break
-        else:
+    offset = 6
 
-            results = model(frame, verbose=False)[0]
+    
+    red_line_y = points[1] * 2
+    blue_line_y = (points[3] + points[1])*2
+    
+    poly_point = np.array([[points[0]*2, points[1]*2],
+                [points[0]*2, (points[3] + points[1])*2],
+                [(points[2] + points[0])*2,(points[3] + points[1])*2],
+                [(points[2] + points[0])*2, points[1]*2]])
 
-            detections = sv.Detections.from_ultralytics(results)
-            detections = detections[detections.class_id == 0]
-            detections = detections[detections.confidence > conf]
+    thickness = sv.calculate_dynamic_line_thickness(
+                    resolution_wh=(width,height)
+            )
+    text_scale = sv.calculate_dynamic_text_scale(
+        resolution_wh=(width,height)
+    )
+    
+    byteTracker = sv.ByteTrack()
+    
+    poly_annotator = sv.PolygonAnnotator(
+                color=sv.Color.red,
+                thickness=thickness
+            )
+    
+    polygon_zone = sv.PolygonZone(
+                    polygon=poly_point, 
+                    frame_resolution_wh=(width,height)
+                    , triggering_position=sv.Position.CENTER
+                )
+
+    trace_annotator = sv.TraceAnnotator(
+        thickness=thickness,
+        position=sv.Position.CENTER
+        )
+
+    label_annotator = sv.LabelAnnotator(
+        text_scale=text_scale,
+        text_thickness=thickness,
+        text_position=sv.Position.BOTTOM_CENTER,
+    )
+
+    bounding_box_annotator = sv.BoundingBoxAnnotator(
+        thickness=thickness
+    )
+    CLASS_NAMES_DICT = model.model.names
 
 
-            frame = box_annotator.annotate(scene=frame, detections=detections)
-            # output the frame 
-            out.write(frame)
+    results = model(frame, verbose=False)[0]
+    
+    detections = sv.Detections.from_ultralytics(results)
+    detections = detections[detections.confidence > conf]
+    detections = detections[polygon_zone.trigger(detections)]
+    detections = byteTracker.update_with_detections(detections)
+    
+    labels = []
+    for tracker_id, xyxy, class_id in zip(detections.tracker_id, detections.xyxy, detections.class_id):
+        labels.append(f'{CLASS_NAMES_DICT[class_id]}')
+        x3, y3, x4, y4 = xyxy
+        id = tracker_id
+        cx = int(x3 + x4) // 2
+        cy = int(y3 + y4) // 2
+        
 
-            # ret, buffer = cv2.imencode('.jpg', frame)
-            # frame = buffer.tobytes()
+        if red_line_y<(cy+offset) and red_line_y > (cy-offset):   
+            down[id]=time.time()   # current time when vehichle touch the first line
+        if id in down:
+            
+            if blue_line_y<(cy+offset) and blue_line_y > (cy-offset):
+                
+                elapsed_time=time.time() - down[id]  # current time when vehicle touch the second line. Also we a re minusing the previous time ( current time of line 1)
+                print(f'{elapsed_time}-whats' )
+                if counter_down.count(id)==0:
+                    counter_down.append(id)
+                    a_speed_ms = distance / elapsed_time
+                    a_speed_kh = a_speed_ms * 3.6  # this will give kilometers per hour for each vehicle. This is the condition for going downside
+                    # cv2.circle(frame,(cx,cy),4,(0,0,255),-1)
+                    # cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)  # Draw bounding box
+                    # cv2.putText(frame,str(id),(x3,y3),cv2.FONT_HERSHEY_COMPLEX,0.6,(255,255,255),1)
+                    # cv2.putText(frame,str(int(a_speed_kh))+'Km/h',(x4,y4 ),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,255,255),2)
 
-        if count == 1000:
-            out.release()
-            count = 0
-            curr_datetime = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-            out = cv2.VideoWriter(f'{pdt_Path}/{curr_datetime}.mp4', fourcc, 20.0, (width, height)) 
 
-        count = count + 1
-        if count % 50 == 0:
-            print(count)
+        #####going UP blue line#####     
+        if blue_line_y<(cy+offset) and blue_line_y > (cy-offset):
+            up[id]=time.time()
+        if id in up:
 
+            if red_line_y<(cy+offset) and red_line_y > (cy-offset):
+                elapsed1_time=time.time() - up[id]
+                # formula of speed= distance/time 
+                if counter_up.count(id)==0:
+                    counter_up.append(id)
+                    a_speed_ms1 = distance / elapsed1_time
+                    a_speed_kh1 = a_speed_ms1 * 3.6
+                    # cv2.circle(frame,(cx,cy),4,(0,0,255),-1)
+                    # cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)  # Draw bounding box
+                    # cv2.putText(frame,str(id),(x3,y3),cv2.FONT_HERSHEY_COMPLEX,0.6,(255,255,255),1)
+                    # cv2.putText(frame,str(int(a_speed_kh1))+'Km/h',(x4,y4),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,255,255),2)
+        
+    
+    text_color = (0, 0, 0)  # Black color for text
+    yellow_color = (0, 255, 255)  # Yellow color for background
+    red_color = (0, 0, 255)  # Red color for lines
+    blue_color = (255, 0, 0)  # Blue color for lines
 
+    cv2.rectangle(frame, (0, 0), (250, 90), yellow_color, -1)
 
+    cv2.line(frame, (points[0], red_line_y), (width, red_line_y), red_color, 2)
+    cv2.putText(frame, ('Red Line'), (172, 198), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
 
+    cv2.line(frame, (points[0], blue_line_y), (width, blue_line_y), blue_color, 2)
+    cv2.putText(frame, ('Blue Line'), (8, 268), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
+
+    # cv2.putText(frame, ('Going Down - ' + str(len(counter_down))), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
+    # cv2.putText(frame, ('Going Up - ' + str(len(counter_up))), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
+
+    frame = trace_annotator.annotate(
+        scene=frame, detections=detections
+    )
+    frame = label_annotator.annotate(
+                        scene=frame, detections=detections, labels=labels
+                    )
+    frame = bounding_box_annotator.annotate(
+        scene=frame, detections=detections
+    )
+    frame = poly_annotator.annotate(scene=frame, detections=detections)
+    # annotated_frame = label_annotator.annotate(
+    #     scene=annotated_frame, detections=detections, labels=labels
+    # )
+    
+    # if not os.path.isfile(record_path):
+    #         with open(record_path,'w') as record:
+    #                 titles = f'id,Time,vehicle,Speed(km/h),Number-Plate'
+                    
+    return frame

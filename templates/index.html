@@ -66,19 +66,19 @@
                     <li class="nav-item ">
                         <a href="/" class="nav-link rounded"><i class="bi bi-house-door me-2"></i>Home</a>
                     </li>
-
+                    {% if isConfigured %}
                     <li class="nav-item mt-1">
                         <a href="/dashboard" class="nav-link rounded"><i class="bi bi-speedometer me-2"></i>Dashboard</a>
                     </li>
-
+                    {% endif %}
                     <li class="nav-item mt-1">
                         <a href="/settings" class="nav-link rounded"><i class="bi bi-gear me-2"></i>Settings</a>
                     </li>
-
+                    {% if isConfigured %}
                     <li class="nav-item mt-1">
                         <a href="/cameras" class="nav-link rounded"><i class="bi bi-camera me-2"></i></i>Cameras</a>
                     </li>
-
+                    {% endif %}
                     <li class="nav-item mt-1">
                         <a href="/clips" class="nav-link rounded"><i class="bi bi-film me-2"></i>Clips</a>
                     </li>
