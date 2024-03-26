@@ -1,15 +1,11 @@
 import json
 import cv2
+import sys
 from flask import Flask, render_template, Response, request,redirect, flash
 from modules import VideoSink, generate_frame, RunningCamera, setCamera, PolyDraw
-import numpy as np
 import os
-import threading
-import face_recognition
-import matplotlib.pyplot as plt
 from ultralytics import YOLO
-import supervision as sv
-from supervision import BoxAnnotator, LabelAnnotator
+import threading
 import pandas as pd
 import pickle
 import queue
@@ -19,16 +15,12 @@ app = Flask(__name__)
 app.secret_key = "5a4wd45awd4wa5d4aw5d4a5wd45aw4daw5d"
 
 modelList = os.listdir('static/models')
-licenseModel = YOLO('numPlatev8n.pt')
 
 addresses = {}
 threads = {}
 camDict = {}
 queue_cam_dict = {}
 cameras = 0
-
-box_annotator = BoxAnnotator()
-label_annotator = LabelAnnotator()
 
 isConfig = False
 cap_Path = "static/clips/captured"
@@ -44,54 +36,54 @@ def gen_camera():
     if cameras == 1:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time,conf=conf, pdt_Path=pdt_Path, queue_cam_dict=queue_cam_dict, points=points ),
+            return Response(generate_frame(camDict["cap0"], queue_cam_dict=queue_cam_dict),
                              mimetype='multipart/x-mixed-replace; boundary=frame')
     #----------------------------------------------------------------------------
     if cameras == 2:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap0"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
 
         @app.route(f'/video1')
         def video1():
-            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap1"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
     #----------------------------------------------------------------------------   
     if cameras == 3:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap0"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
 
         @app.route(f'/video1')
         def video1():
-            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap1"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         
         @app.route(f'/video2')
         def video2():
-            return Response(generate_frame(camDict["cap2"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap2"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
     #----------------------------------------------------------------------------
     if cameras == 4:
         @app.route(f'/video0')
         def video0():
-            return Response(generate_frame(camDict["cap0"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap0"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
 
         @app.route(f'/video1')
         def video1():
-            return Response(generate_frame(camDict["cap1"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap1"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         
         @app.route(f'/video2')
         def video2():
-            return Response(generate_frame(camDict["cap2"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap2"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         @app.route(f'/video3')
         def video3():
-            return Response(generate_frame(camDict["cap3"],model=model, real=real_time, queue_cam_dict=queue_cam_dict, points=points ), 
+            return Response(generate_frame(camDict["cap3"], queue_cam_dict=queue_cam_dict), 
                             mimetype='multipart/x-mixed-replace; boundary=frame')
     #================================================================================================
 
@@ -193,6 +185,7 @@ def config():
             print(saved_config)
             pickle.dump(saved_config, open(config_data_path, 'wb') )
             model = YOLO(f"{weight_path}{model}" )
+            # os.execv(sys.argv[0], sys.argv)
             return redirect("/settings")
 
         elif request.form.get('submit') == "Delete":
@@ -232,31 +225,33 @@ def config():
 
 @app.route('/cameras')
 def cctv():
-    return render_template('camera.html')
+    global isConfig
+    return render_template('camera.html', isConfigured = isConfig)
 
-@app.route('/clips')
+@app.route('/clips', methods=['GET','POST'])
 def captured():
+    global isConfig, points
     clipList = os.listdir(cap_Path)
     predictList = os.listdir(pdt_Path)
 
     if request.method == "POST":
         if request.form.get('sink') == "Sink":
-            VideoSink(model=model,conf=conf,cap_Path=cap_Path, pdt_Path=pdt_Path)
+            VideoSink(model=model,conf=conf,cap_Path=cap_Path, pdt_Path=pdt_Path, points=points)
 
-    return render_template('clips.html', clips = clipList, preds = predictList)
+    return render_template('clips.html', clips = clipList, preds = predictList, isConfigured = isConfig)
 
 # ========================================================================================================================================================================
 if __name__ == "__main__":
-    # run_app()
-    app_thread = threading.Thread(target=run_app)
-    if os.path.isfile(address_path):
-        for index, cam in enumerate(camDict):
-            print('cap')
-            _thread = threading.Thread(target=RunningCamera, args=(camDict[cam], cap_Path, queue_cam_dict))
-            threads.update({f'thread{index}':_thread})
+    run_app()
+    # app_thread = threading.Thread(target=run_app)
+    # if os.path.isfile(address_path):
+    #     for index, cam in enumerate(camDict):
+    #         print('cap')
+    #         _thread = threading.Thread(target=RunningCamera, args=(camDict[cam], model,conf,cap_Path, queue_cam_dict, real_time,points))
+    #         threads.update({f'thread{index}':_thread})
 
-    app_thread.start()
-    if os.path.isfile(address_path):
-        for thread in threads:
-            print(thread)
-            threads[thread].start()
+    # app_thread.start()
+    # if os.path.isfile(address_path):
+    #     for thread in threads:
+    #         print(thread)
+    #         threads[thread].start()
